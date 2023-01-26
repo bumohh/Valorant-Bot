@@ -15,20 +15,19 @@ def fetchDataForUser(region,name,tag):
         if 'error' in data:
             raise ValueError(data["error"])
         
-        save_data(data)
+        return data
         
     except requests.exceptions.RequestException as e:
         raise ValueError("Error connecting to API: " + str(e))
     except ValueError as e:
         raise ValueError(str(e))
 
-def save_data(data : requests.Response.json):
+def save_data(data : requests.Response.json, discord_id: int):
     
     player_name = data["data"]["name"]
     player_tag = data["data"]["tag"]
     player_cur_rank = data["data"]["current_data"]["currenttierpatched"]
     player_puuid = data["data"]["puuid"]
-    discord_id = 3261
     
     connection = initDatabase("database.db")
     db = connection.cursor()
@@ -60,7 +59,7 @@ def save_data(data : requests.Response.json):
 
 
 def initTable(connection : sqlite3.Cursor):
-    connection.execute('''CREATE TABLE IF NOT EXISTS valorant_players (player_name TEXT, player_tag TEXT, player_cur_rank TEXT, player_puuid, discord_id INTEGER)''')
+    connection.execute('''CREATE TABLE IF NOT EXISTS valorant_players (player_name TEXT, player_tag TEXT, player_cur_rank TEXT, player_puuid INTEGER, discord_id INTEGER)''')
 
 
 #database functions
@@ -103,9 +102,15 @@ def deinitDatabase(connection : sqlite3.Connection):
 #discord commands
 async def adder_command(ctx: interactions.CommandContext,region: str, name: str, tag: str):
     try:
-        player_name, player_tag, player_cur_rank, player_elo, player_high_rank = fetchDataForUser(region, name, tag)
-        discord_username = ctx.author.name
-        save_data(player_name, player_tag, player_cur_rank, discord_username)
+        #player_name, player_tag, player_cur_rank, player_elo, player_high_rank = fetchDataForUser(region, name, tag)
+        
+        data = fetchDataForUser(region, name, tag)
+        
+        player_name = data["data"]["name"]
+        player_tag = data["data"]["tag"]
+        player_cur_rank = data["data"]["current_data"]["currenttierpatched"]
+        discord_id = ctx.author.id
+        save_data(data, discord_id)
         await ctx.send(f"Player {player_name} #{player_tag}'s role has been updated to {player_cur_rank}.")
 
         ranks = {

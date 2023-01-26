@@ -2,6 +2,9 @@ import interactions
 import requests
 import discord
 import sqlite3
+from token import _token
+
+bot = interactions.Client(token=_token)
 
 def fetchDataForUser(region,name,tag):
     endpoint = f"https://api.henrikdev.xyz/valorant/v2/mmr/{region}/{name}/{tag}"
@@ -103,7 +106,28 @@ async def adder_command(region: str, name: str, tag: str):
         print(str(e))
         #await ctx.send(str(e))
 
-
-fetchDataForUser("na", "Bumo", "NSFW")
-fetchDataForUser("na", "CallMeABadBoy", "uwu")
-fetchDataForUser("na", "Neko", "drunk")
+#bot commands
+@bot.command(
+    name="add_valorant_account",
+    description="Auto Valorant account rank role adder.",
+    options = [
+        interactions.Option(
+            name="region",  
+            description="Example NA",
+            type=interactions.OptionType.STRING,
+            required=True,
+        ),
+        interactions.Option(
+            name="name",
+            description="Example nhmln",
+            type=interactions.OptionType.STRING,
+            required=True,
+        ),
+        interactions.Option(
+            name="tag",
+            description="Example NA1",
+            type=interactions.OptionType.STRING,
+            required=True,
+        ),
+    ],
+)

@@ -2,9 +2,9 @@ import interactions
 import requests
 import discord
 import sqlite3
-from token import _token
+from variables import discord_token
 
-bot = interactions.Client(token=_token)
+bot = interactions.Client(discord_token)
 
 def fetchDataForUser(region,name,tag):
     endpoint = f"https://api.henrikdev.xyz/valorant/v2/mmr/{region}/{name}/{tag}"
@@ -74,38 +74,6 @@ def saveDatabaseChanges(connection : sqlite3.Connection):
 def deinitDatabase(connection : sqlite3.Connection):
     connection.close()
 
-
-#discord commands
-async def adder_command(region: str, name: str, tag: str):
-    try:
-        player_name, player_tag, player_cur_rank = fetchDataForUser(region, name, tag)
-        #discord_username = ctx.author.name
-        save_data(player_name, player_tag, player_cur_rank)
-        #await ctx.send(f"Player {player_name} #{player_tag}'s role has been updated to {player_cur_rank}.")
-
-        ranks = {
-            "Iron": discord.Colour.from_rgb(139, 94, 60),
-            "Bronze": discord.Colour.from_rgb(205, 127, 50),
-            "Silver": discord.Colour.from_rgb(192, 192, 192),
-            "Gold": discord.Colour.from_rgb(255, 215, 0),
-            "Platinum": discord.Colour.from_rgb(229, 228, 226),
-            "Diamond": discord.Colour.from_rgb(185, 242, 255),
-            "Immortal": discord.Colour.from_rgb(100, 65, 165),
-            "Radiant": discord.Colour.from_rgb(245, 166, 35)
-        }
-        rank_name = ' '.join(player_cur_rank.split()[:-1])
-        #if rank_name in ranks:
-            #color = ranks[rank_name].value
-            #role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)
-            #if role is None:
-                #await ctx.guild.create_role(name="Valorant | "+player_cur_rank, color=color)
-            #role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)
-            #await ctx.author.add_role(role)
-        await print("success")
-    except ValueError as e:
-        print(str(e))
-        #await ctx.send(str(e))
-
 #bot commands
 @bot.command(
     name="add_valorant_account",
@@ -131,3 +99,35 @@ async def adder_command(region: str, name: str, tag: str):
         ),
     ],
 )
+
+#discord commands
+async def adder_command(ctx: interactions.CommandContext,region: str, name: str, tag: str):
+    try:
+        player_name, player_tag, player_cur_rank, player_elo, player_high_rank = fetchDataForUser(region, name, tag)
+        discord_username = ctx.author.name
+        save_data(player_name, player_tag, player_cur_rank, discord_username)
+        await ctx.send(f"Player {player_name} #{player_tag}'s role has been updated to {player_cur_rank}.")
+
+        ranks = {
+            "Iron": discord.Colour.from_rgb(139, 94, 60),
+            "Bronze": discord.Colour.from_rgb(205, 127, 50),
+            "Silver": discord.Colour.from_rgb(192, 192, 192),
+            "Gold": discord.Colour.from_rgb(255, 215, 0),
+            "Platinum": discord.Colour.from_rgb(229, 228, 226),
+            "Diamond": discord.Colour.from_rgb(185, 242, 255),
+            "Immortal": discord.Colour.from_rgb(100, 65, 165),
+            "Radiant": discord.Colour.from_rgb(245, 166, 35)
+        }
+        rank_name = ' '.join(player_cur_rank.split()[:-1])
+        if rank_name in ranks:
+            color = ranks[rank_name].value
+            role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)
+            if role is None:
+                await ctx.guild.create_role(name="Valorant | "+player_cur_rank, color=color)
+            role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)
+            await ctx.author.add_role(role)
+    except ValueError as e:
+        await ctx.send(str(e))
+
+
+bot.start()

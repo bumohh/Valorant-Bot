@@ -31,18 +31,23 @@ bot = interactions.Client(discord_token)
 @bot.event
 async def on_ready():
     print("starting updates")
-    users = fetchUsersFromDB()
-    writeGlobalVariable("count",str(users.__len__()))
-    #await asyncio.sleep(60)
-    count = users.__len__()
-    while(int(readGlobalVariable("count")) == count):
-        index = int(readGlobalVariable("index"))
-        count = int(readGlobalVariable("count"))
-        if not (index > count):
-            updateUsers(index, users)
-        else : 
-            pass
-        await asyncio.sleep(300)
+    while(True):
+        if os.path.isfile(os.path.dirname(__file__)+"\database.db"):
+            users = fetchUsersFromDB()
+            writeGlobalVariable("count",str(users.__len__()))
+            #await asyncio.sleep(60)
+            count = users.__len__()
+            while(int(readGlobalVariable("count")) == count):
+                index = int(readGlobalVariable("index"))
+                count = int(readGlobalVariable("count"))
+                if not (index > count):
+                    updateUsers(index, users)
+                else : 
+                    pass
+                await asyncio.sleep(300)
+        else:
+            print("Database does not exist yet waiting...")
+            await asyncio.sleep(60)
         
     
 

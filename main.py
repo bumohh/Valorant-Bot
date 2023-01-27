@@ -2,10 +2,51 @@ import interactions
 import requests
 import discord
 import sqlite3
+import asyncio
+import os
 from variables import discord_token
+from configparser import ConfigParser
+
+#file reading
+def readGlobalVariable(name: str) :
+    config = ConfigParser()
+    path_to_config = os.path.dirname(__file__)+"\config.cfg"
+    config.read(path_to_config)
+
+    return config["Global Variables"][name]
+
+def writeGlobalVariable(name: str, value : str) : 
+    config = ConfigParser()
+    path_to_config = os.path.dirname(__file__)+"\config.cfg"
+    config.read(path_to_config)
+    
+    config["Global Variables"][name] = value
+    with open(path_to_config, 'w') as conf:
+        config.write(conf)
+    
 
 bot = interactions.Client(discord_token)
 
+#discord events
+@bot.event
+async def on_ready():
+    print("starting updates")
+    users = fetchUsersFromDB()
+    writeGlobalVariable("count",str(users.__len__()))
+    #await asyncio.sleep(60)
+    count = users.__len__()
+    while(int(readGlobalVariable("count")) == count):
+        index = int(readGlobalVariable("index"))
+        count = int(readGlobalVariable("count"))
+        if not (index > count):
+            updateUsers(index, users)
+        else : 
+            pass
+        await asyncio.sleep(300)
+        
+    
+
+#discord methods
 def fetchDataForUser(region,name,tag):
     endpoint = f"https://api.henrikdev.xyz/valorant/v2/mmr/{region}/{name}/{tag}"
     try:
@@ -22,7 +63,7 @@ def fetchDataForUser(region,name,tag):
     except ValueError as e:
         raise ValueError(str(e))
 
-def save_data(data : requests.Response.json, discord_id: int):
+def save_data(data : requests.Response.json, discord_id: int, region: str):
     
     player_name = data["data"]["name"]
     player_tag = data["data"]["tag"]
@@ -49,19 +90,50 @@ def save_data(data : requests.Response.json, discord_id: int):
             db.execute("UPDATE valorant_players SET player_cur_rank=? WHERE discord_id=? AND player_puuid=?", (player_cur_rank, discord_id, player_puuid,))
         else :
             print("inserting non-existing discord user")
-            db.execute("INSERT INTO valorant_players (player_name, player_tag, player_cur_rank, player_puuid, discord_id) VALUES (?,?,?,?,?)", (player_name, player_tag, player_cur_rank, player_puuid, discord_id,))
+            db.execute("INSERT INTO valorant_players (player_region, player_name, player_tag, player_cur_rank, player_puuid, discord_id) VALUES (?,?,?,?,?,?)", (region, player_name, player_tag, player_cur_rank, player_puuid, discord_id,))
     else:
         print("inserting non-existing discord user because data null")
-        db.execute("INSERT INTO valorant_players (player_name, player_tag, player_cur_rank, player_puuid, discord_id) VALUES (?,?,?,?,?)", (player_name, player_tag, player_cur_rank, player_puuid, discord_id,))
+        db.execute("INSERT INTO valorant_players (player_region, player_name, player_tag, player_cur_rank, player_puuid, discord_id) VALUES (?,?,?,?,?,?)", (region, player_name, player_tag, player_cur_rank, player_puuid, discord_id,))
         
     saveDatabaseChanges(connection)
     deinitDatabase(connection)
 
 
-def initTable(connection : sqlite3.Cursor):
-    connection.execute('''CREATE TABLE IF NOT EXISTS valorant_players (player_name TEXT, player_tag TEXT, player_cur_rank TEXT, player_puuid INTEGER, discord_id INTEGER)''')
+def fetchUsersFromDB():
+    connection = initDatabase("database.db")
+    db = connection.cursor()
+    
+    db.execute("SELECT * FROM valorant_players ORDER BY discord_id")
+    data_list=db.fetchall()
+    saveDatabaseChanges(connection)
+    deinitDatabase(connection)
+    return data_list
+    
+def updateUsers(index : int, users : list(tuple())):
+    #0region #1name #2tag #3rank #4puuid #5discord_id
+    print("running update users")
+    for i in range(15): 
+        user = users[int(readGlobalVariable("index"))]
+        print("fetching data for user " + str(user[0]) + str(user[1]) + str(user[2]))
+        data = fetchDataForUser(user[0], user[1], user[2])
+        #print("data "+ str(data))
+        updateRank(data["data"]["current_data"]["currenttierpatched"], user[5], user[4])
+        
+        count = int(readGlobalVariable("count"))
+        i = int(readGlobalVariable("index"))
+        if i == count-1 :
+            writeGlobalVariable("index", str(0))
+        else : 
+            writeGlobalVariable("index", str(i + 1))
+        print("going to next user")
 
-
+def updateRank(player_cur_rank, discord_id, player_puuid):
+    connection = initDatabase("database.db")
+    db = connection.cursor()
+    db.execute("UPDATE valorant_players SET player_cur_rank=? WHERE discord_id=? AND player_puuid=?", (player_cur_rank, discord_id, player_puuid,))
+    saveDatabaseChanges(connection)
+    deinitDatabase(connection)
+    
 #database functions
 def initDatabase(address : str):
     connection = sqlite3.connect(address)
@@ -72,6 +144,9 @@ def saveDatabaseChanges(connection : sqlite3.Connection):
     
 def deinitDatabase(connection : sqlite3.Connection):
     connection.close()
+    
+def initTable(connection : sqlite3.Cursor):
+    connection.execute('''CREATE TABLE IF NOT EXISTS valorant_players (player_region TEXT, player_name TEXT, player_tag TEXT, player_cur_rank TEXT, player_puuid INTEGER, discord_id INTEGER)''')
 
 #bot commands
 @bot.command(
@@ -99,7 +174,7 @@ def deinitDatabase(connection : sqlite3.Connection):
     ],
 )
 
-#discord commands
+#discord command methods
 async def adder_command(ctx: interactions.CommandContext,region: str, name: str, tag: str):
     try:
         #player_name, player_tag, player_cur_rank, player_elo, player_high_rank = fetchDataForUser(region, name, tag)
@@ -109,8 +184,15 @@ async def adder_command(ctx: interactions.CommandContext,region: str, name: str,
         player_name = data["data"]["name"]
         player_tag = data["data"]["tag"]
         player_cur_rank = data["data"]["current_data"]["currenttierpatched"]
-        discord_id = ctx.author.id
-        save_data(data, discord_id)
+        discord_id = int(ctx.author.id)
+        save_data(data, discord_id, region)
+        
+        if player_cur_rank == None :
+            rank_name = "Unranked"
+            player_cur_rank = "Unranked"
+        else:
+            rank_name = ' '.join(player_cur_rank.split()[:-1])
+            
         await ctx.send(f"Player {player_name} #{player_tag}'s role has been updated to {player_cur_rank}.")
 
         ranks = {
@@ -121,9 +203,10 @@ async def adder_command(ctx: interactions.CommandContext,region: str, name: str,
             "Platinum": discord.Colour.from_rgb(229, 228, 226),
             "Diamond": discord.Colour.from_rgb(185, 242, 255),
             "Immortal": discord.Colour.from_rgb(100, 65, 165),
-            "Radiant": discord.Colour.from_rgb(245, 166, 35)
+            "Radiant": discord.Colour.from_rgb(245, 166, 35),
+            "Unranked": discord.Colour.default()
         }
-        rank_name = ' '.join(player_cur_rank.split()[:-1])
+            
         if rank_name in ranks:
             color = ranks[rank_name].value
             role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)

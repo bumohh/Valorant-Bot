@@ -38,25 +38,27 @@ bot = interactions.Client(discord_token)
 #discord events
 @bot.event
 async def on_ready():
-    logging.info("starting updates")
-    while(True):
-        if os.path.isfile(os.path.dirname(__file__)+"\database.db"):
-            users = fetchUsersFromDB()
-            writeGlobalVariable("count",str(users.__len__()))
-            #await asyncio.sleep(60)
-            count = users.__len__()
-            while(int(readGlobalVariable("count")) == count):
-                index = int(readGlobalVariable("index"))
-                count = int(readGlobalVariable("count"))
-                if not (index > count):
-                    updateUsers(index, users)
-                else : 
-                    pass    
-                await asyncio.sleep(150)
-        else:
-            logging.info("Database does not exist yet waiting...")
-            await asyncio.sleep(60)
-        
+    asyncio.create_task(updater())
+    pass
+
+async def updater():
+    writeGlobalVariable("breaker", "0")
+    while readGlobalVariable("breaker") == "0":
+        logging.info("starting updates")
+        users = fetchUsersFromDB()
+        writeGlobalVariable("count",str(users.__len__()))
+        count = users.__len__()
+        logging.debug("count = users.__len__() is equal to " + str(count))
+        #await asyncio.sleep(60)
+        while(int(readGlobalVariable("count")) == count):
+            await asyncio.sleep(150)
+            index = int(readGlobalVariable("index"))
+            count = int(readGlobalVariable("count"))
+            if not (index > count):
+                updateUsers(index, users)
+            else : 
+                pass
+            
     
 
 #discord methods
@@ -113,32 +115,38 @@ def save_data(data : requests.Response.json, discord_id: int, region: str):
 
 
 def fetchUsersFromDB():
-    connection = initDatabase("database.db")
-    db = connection.cursor()
-    
-    db.execute("SELECT * FROM valorant_players ORDER BY discord_id")
-    data_list=db.fetchall()
-    saveDatabaseChanges(connection)
-    deinitDatabase(connection)
-    return data_list
+    try:
+        connection = initDatabase("database.db")
+        db = connection.cursor()
+
+        db.execute("SELECT * FROM valorant_players ORDER BY discord_id")
+        data_list=db.fetchall()
+        saveDatabaseChanges(connection)
+        deinitDatabase(connection)
+        return data_list
+    except:
+        return []
     
 def updateUsers(index : int, users : list(tuple())):
-    #0region #1name #2tag #3rank #4puuid #5discord_id
-    logging.info("running update users")
-    for i in range(5): 
-        user = users[int(readGlobalVariable("index"))]
-        logging.info("fetching data for user in region " + str(user[0]) + ", name and tag as " + str(user[1]) +" #"+ str(user[2]))
-        data = fetchDataForUser(user[0], user[1], user[2])
-        #logging.info("data "+ str(data))
-        updateRank(data["data"]["current_data"]["currenttierpatched"], user[5], user[4])
-        
-        count = int(readGlobalVariable("count"))
-        i = int(readGlobalVariable("index"))
-        if i == count-1 :
-            writeGlobalVariable("index", str(0))
-        else : 
-            writeGlobalVariable("index", str(i + 1))
-        logging.info("going to next user")
+    try:
+        #0region #1name #2tag #3rank #4puuid #5discord_id
+        logging.info("running update users")
+        for i in range(5): 
+            user = users[int(readGlobalVariable("index"))]
+            logging.info("fetching data for user in region " + str(user[0]) + ", name and tag as " + str(user[1]) +" #"+ str(user[2]))
+            data = fetchDataForUser(user[0], user[1], user[2])
+            #logging.info("data "+ str(data))
+            updateRank(data["data"]["current_data"]["currenttierpatched"], user[5], user[4])
+            
+            count = int(readGlobalVariable("count"))
+            i = int(readGlobalVariable("index"))
+            if i == count-1 :
+                writeGlobalVariable("index", "0")
+            else : 
+                writeGlobalVariable("index", str(i + 1))
+            logging.info("going to next user")
+    except:
+        pass
 
 def updateRank(player_cur_rank, discord_id, player_puuid):
     connection = initDatabase("database.db")
@@ -227,9 +235,10 @@ async def adder_command(ctx: interactions.CommandContext,region: str, name: str,
                 await ctx.guild.create_role(name="Valorant | "+player_cur_rank, color=color)
             role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)
             await ctx.author.add_role(role)
-
+        writeGlobalVariable("breaker", "1")             
+        asyncio.create_task(updater())
     except ValueError as e:
         await ctx.send(str(e))
-
+    
 internalSoftReset()
 bot.start()

@@ -52,45 +52,16 @@ async def on_ready():
 #discord command methods
 async def adder_command(ctx: interactions.CommandContext,region: str, name: str, tag: str):
     try:
-        #player_name, player_tag, player_cur_rank, player_elo, player_high_rank = fetchDataForUser(region, name, tag)
+        
         logging.debug("starting adder_command function")
         
         data = network.fetchDataForUser(region, name, tag)
+
+        discord_methods.save_data(ctx, data, region)
         
-        player_name = data["data"]["name"]
-        player_tag = data["data"]["tag"]
-        player_cur_rank = data["data"]["current_data"]["currenttierpatched"]
-        discord_id = int(ctx.author.id)
-        discord_methods.save_data(data, discord_id, region)
+        await discord_methods.updateDiscordRank(ctx, data)
         
-        if player_cur_rank == None :
-            rank_name = "Unranked"
-            player_cur_rank = "Unranked"
-        else:
-            rank_name = ' '.join(player_cur_rank.split()[:-1])
-            
-        await ctx.send(f"Player {player_name} #{player_tag}'s role has been updated to {player_cur_rank}.")
-        
-        ranks = {
-            "Iron": discord.Colour.from_rgb(139, 94, 60),
-            "Bronze": discord.Colour.from_rgb(205, 127, 50),
-            "Silver": discord.Colour.from_rgb(192, 192, 192),
-            "Gold": discord.Colour.from_rgb(255, 215, 0),
-            "Platinum": discord.Colour.from_rgb(229, 228, 226),
-            "Diamond": discord.Colour.from_rgb(185, 242, 255),
-            "Immortal": discord.Colour.from_rgb(100, 65, 165),
-            "Radiant": discord.Colour.from_rgb(245, 166, 35),
-            "Unranked": discord.Colour.default()
-        }
-            
-        if rank_name in ranks:
-            color = ranks[rank_name].value
-            role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)
-            if role is None:
-                await ctx.guild.create_role(name="Valorant | "+player_cur_rank, color=color)
-            role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)
-            await ctx.author.add_role(role)
-        handler.startNewTask(asyncio.create_task(discord_methods.updater()))
+        #handler.startNewTask(asyncio.create_task(discord_methods.updater()))
     except ValueError as e:
         await ctx.send(str(e))
     

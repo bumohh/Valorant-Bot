@@ -1,7 +1,7 @@
 import requests
 import logging
 
-def fetchDataForUser(region,name,tag):
+def fetchDataForUser(region,name,tag) -> requests.Response.json:
     logging.debug("starting fetchdataforuser function")
     endpoint = f"https://api.henrikdev.xyz/valorant/v2/mmr/{region}/{name}/{tag}"
     try:

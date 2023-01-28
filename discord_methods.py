@@ -9,12 +9,13 @@ import asyncio
 
 
 #discord methods
-def save_data(data : requests.Response.json, discord_id: int, region: str):
+def save_data(ctx : interactions.CommandContext, data : requests.Response.json, region: str):
     logging.debug("starting save data function")
     player_name = data["data"]["name"]
     player_tag = data["data"]["tag"]
     player_cur_rank = data["data"]["current_data"]["currenttierpatched"]
     player_puuid = data["data"]["puuid"]
+    discord_id = int(ctx.author.id)
     
     connection = database.initDatabase("database.db")
     db = connection.cursor()
@@ -23,7 +24,7 @@ def save_data(data : requests.Response.json, discord_id: int, region: str):
     data = database.fetchUserUsingpuuid(db, player_puuid)
     
     if data:
-        if data[4]!=discord_id:
+        if data[-1]!=discord_id:
             logging.info("User is already registered under another discord id, try again.")
             database.deinitDatabase(connection)
             return
@@ -31,7 +32,7 @@ def save_data(data : requests.Response.json, discord_id: int, region: str):
     data = database.fetchUserUsingDiscordAndpuuid(db, discord_id, player_puuid)
     
     if data: 
-        if data[4]==discord_id:
+        if data[-1]==discord_id:
             logging.info("updating for existing discord user")
             database.updateUserRankWith(db, discord_id, player_puuid, player_cur_rank)
         else :
@@ -91,7 +92,38 @@ def updateUsers(index : int, users : list(tuple())):
     except:
         pass
     
-def updateDiscordRank(ctx: interactions.CommandContext):
-            
-    pass
+async def updateDiscordRank(ctx: interactions.CommandContext, data : requests.Response.json):
+    
+    logging.info("updaing discord rank")
+    
+    player_name = data["data"]["name"]
+    player_tag = data["data"]["tag"]
+    player_cur_rank = data["data"]["current_data"]["currenttierpatched"]
+    if player_cur_rank == None :
+            rank_name = "Unranked"
+            player_cur_rank = "Unranked"
+    else:
+        rank_name = ' '.join(player_cur_rank.split()[:-1])
+        
+    await ctx.send(f"Player {player_name} #{player_tag}'s role has been updated to {player_cur_rank}.")
+    
+    ranks = {
+        "Iron": discord.Colour.from_rgb(139, 94, 60),
+        "Bronze": discord.Colour.from_rgb(205, 127, 50),
+        "Silver": discord.Colour.from_rgb(192, 192, 192),
+        "Gold": discord.Colour.from_rgb(255, 215, 0),
+        "Platinum": discord.Colour.from_rgb(229, 228, 226),
+        "Diamond": discord.Colour.from_rgb(185, 242, 255),
+        "Immortal": discord.Colour.from_rgb(100, 65, 165),
+        "Radiant": discord.Colour.from_rgb(245, 166, 35),
+        "Unranked": discord.Colour.default()
+    }
+        
+    if rank_name in ranks:
+        color = ranks[rank_name].value
+        role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)
+        if role is None:
+            await ctx.guild.create_role(name="Valorant | "+player_cur_rank, color=color)
+        role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)
+        await ctx.author.add_role(role)
     

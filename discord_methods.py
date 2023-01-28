@@ -94,7 +94,7 @@ def updateUsers(index : int, users : list(tuple())):
     
 async def updateDiscordRank(ctx: interactions.CommandContext, data : requests.Response.json):
     
-    logging.info("updaing discord rank")
+    logging.info("updating discord rank")
     
     player_name = data["data"]["name"]
     player_tag = data["data"]["tag"]
@@ -126,4 +126,8 @@ async def updateDiscordRank(ctx: interactions.CommandContext, data : requests.Re
             await ctx.guild.create_role(name="Valorant | "+player_cur_rank, color=color)
         role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)
         await ctx.author.add_role(role)
-    
+
+async def updateDiscordRank(discord_id : int):
+    #WIP
+    a = await discord.guild.utils.find(lambda m: m.id == discord_id, interactions.guild.Guild)
+    logging.debug("member : " + a)

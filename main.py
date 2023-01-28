@@ -19,6 +19,8 @@ handler = taskHandler.TaskHandler()
 #discord events
 @bot.event
 async def on_ready():
+    #WIP
+    await discord_methods.updateDiscordRank(discord_id=514954140934340600)
     handler.__init__(asyncio.create_task(discord_methods.updater()))
     pass
             

@@ -17,3 +17,5 @@ def fetchDataForUser(region,name,tag):
         raise ValueError("Error connecting to API: " + str(e))
     except ValueError as e:
         raise ValueError(str(e))
+
+

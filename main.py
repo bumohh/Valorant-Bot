@@ -90,7 +90,6 @@ async def adder_command(ctx: interactions.CommandContext,region: str, name: str,
                 await ctx.guild.create_role(name="Valorant | "+player_cur_rank, color=color)
             role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)
             await ctx.author.add_role(role)
-        #config.writeGlobalVariable("breaker", "1")
         handler.startNewTask(asyncio.create_task(discord_methods.updater()))
     except ValueError as e:
         await ctx.send(str(e))

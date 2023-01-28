@@ -54,8 +54,6 @@ def updateDBRank(player_cur_rank, discord_id, player_puuid):
     
 async def updater():
     logging.debug("starting updater function")
-    #config.writeGlobalVariable("breaker", "0")
-    #while config.readGlobalVariable("breaker") == "0":
     logging.info("starting updates")
     users = database.fetchUsersFromDB()
     config.writeGlobalVariable("count",str(users.__len__()))

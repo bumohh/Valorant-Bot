@@ -1,6 +1,8 @@
 import os
 from configparser import ConfigParser
 import logging
+from datetime import datetime
+import asyncio
 
 #file reading / writing
 def readGlobalVariable(name: str) :
@@ -23,3 +25,15 @@ def internalSoftReset():
     logging.debug("starting internalsoftreset function")
     writeGlobalVariable("index","0")
     writeGlobalVariable("count","0")
+    writeGlobalVariable("current_minute",str(datetime.now().minute))
+
+
+# ??????? Test fuction for potential API call limiter
+def minuteLimit():
+    minute = datetime.now().minute
+    if str(minute) == readGlobalVariable("current_minute"):
+        writeGlobalVariable("minute_counter", str(int(readGlobalVariable("minute_counter"))+1))
+    else:
+        writeGlobalVariable("current_minute",str(datetime.now().minute))
+
+

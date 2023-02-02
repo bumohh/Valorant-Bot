@@ -127,7 +127,49 @@ async def updateDiscordRank(ctx: interactions.CommandContext, data : requests.Re
         role = discord.utils.get(ctx.guild.roles, name="Valorant | "+player_cur_rank)
         await ctx.author.add_role(role)
 
-async def updateDiscordRank(discord_id : int):
-    #WIP
-    a = await discord.guild.utils.find(lambda m: m.id == discord_id, interactions.guild.Guild)
-    logging.debug("member : " + a)
+# async def updateDiscordRank(discord_id : int):
+#     #WIP
+#     a = await discord.guild.utils.find(lambda m: m.id == discord_id, interactions.guild.Guild)
+#     logging.debug("member : " + a)
+
+
+async def updateDiscordRankInternal(member: discord.Member):
+    logging.info("updating discord rank")
+    intents = discord.Intents.default()
+    intents.members = True
+    client = discord.Client(intents=intents)
+    guild = client.get_guild(1056830364275982347)
+    member = guild.get_member(184886547693174800)
+
+
+    # player_cur_rank = data["data"]["current_data"]["currenttierpatched"]
+    # if player_cur_rank == None :
+    #         rank_name = "Unranked"
+    #         player_cur_rank = "Unranked"
+    # else:
+    #     rank_name = ' '.join(player_cur_rank.split()[:-1])
+    rank_name = "Bronze"
+    player_cur_rank = "Bronze 2"
+        
+    member = discord.utils.get(guild.members, id=184886547693174800)
+
+    ranks = {
+        "Iron": discord.Colour.from_rgb(139, 94, 60),
+        "Bronze": discord.Colour.from_rgb(205, 127, 50),
+        "Silver": discord.Colour.from_rgb(192, 192, 192),
+        "Gold": discord.Colour.from_rgb(255, 215, 0),
+        "Platinum": discord.Colour.from_rgb(229, 228, 226),
+        "Diamond": discord.Colour.from_rgb(185, 242, 255),
+        "Immortal": discord.Colour.from_rgb(100, 65, 165),
+        "Radiant": discord.Colour.from_rgb(245, 166, 35),
+        "Unranked": discord.Colour.default()
+    }
+        
+    if rank_name in ranks:
+        color = ranks[rank_name].value
+        role = discord.utils.get(interactions.guild.Guild.roles, name="Valorant | "+player_cur_rank)
+        if role is None:
+            await interactions.guild.Guild.create_role(name="Valorant | "+player_cur_rank, color=color)
+        role = discord.utils.get(interactions.guild.Guild.roles, name="Valorant | "+player_cur_rank)
+        await member.add_role(role)
+

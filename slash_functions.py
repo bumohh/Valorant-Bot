@@ -92,8 +92,6 @@ def removeValorantAccountfromDatabase(discord_id):
     cursor.close()
     connect.close()
 
-nest = getRowsByDiscord_id(184886547693174785)
-
 
 
 

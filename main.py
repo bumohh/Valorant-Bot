@@ -152,7 +152,10 @@ async def valTrackingAddCommand(interaction: discord.Interaction, region: str, n
         await member.add_roles(role)
         #await interaction.response.send_message("Account: "+str(region)+" "+name+" #"+tag+" has been added user: "+member.name+"#"+member.discriminator+".", ephemeral = True)
         embed = discord.Embed(title="Added Valorant Account:", color=color)
-        embed.set_thumbnail(url=f"{rank_image}")
+        if rank_short == "Unranked": 
+            embed.set_thumbnail(url="https://www.metasrc.com/assets/v/3.25.2/images/valorant/ranks/unranked.png")
+        else:
+            embed.set_thumbnail(url=f"{rank_image}")
         embed.set_image(url=f"{bannerValApiCall_results}")
         embed.add_field(name="Region:", value=region, inline=True)
         embed.add_field(name="Username:", value=name, inline=True)
@@ -167,9 +170,9 @@ async def valTrackingAddCommand(interaction: discord.Interaction, region: str, n
 async def valAccountsOverview(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=False)
     discord_id = interaction.user.id
-    embed_list = slash_functions.getRowsByDiscord_id(discord_id)
-
-    for user_id, region, name, tag, rank_full, puuid in embed_list:
+    fetched_data = slash_functions.getRowsByDiscord_id(discord_id)
+    embed_list = []
+    for user_id, region, name, tag, rank_full, puuid in fetched_data:
         rank_image = str(slash_functions.InitialValApiCall(region, name, tag)[2])
         banner_image = str(slash_functions.bannerValApiCall(name, tag))
         # Sorts pulled_rank_full into variables for setting and creating
@@ -195,14 +198,19 @@ async def valAccountsOverview(interaction: discord.Interaction):
         color = ranks[rank_short].value
         
         embed = discord.Embed(title="Overview of Valorant Accounts:", color=color)
-        embed.set_thumbnail(url=f"{rank_image}")
+        if rank_short == "Unranked": 
+            embed.set_thumbnail(url="https://www.metasrc.com/assets/v/3.25.2/images/valorant/ranks/unranked.png")
+        else:
+            embed.set_thumbnail(url=f"{rank_image}")
         embed.set_image(url=f"{banner_image}")
         embed.add_field(name="Region:", value=region, inline=True)
         embed.add_field(name="Username:", value=name, inline=True)
         embed.add_field(name="Tag:", value=tag, inline=True)
         embed.add_field(name="Rank:", value=rank_full, inline=True)
-        embed.add_field(name="Added Role:",value=role_name, inline=True)        
-        await interaction.followup.send(embed=embed)
+        embed.add_field(name="Added Role:",value=role_name, inline=True)     
+        embed_list.append(embed)   
+    await paginate(interaction, embed_list)
+        #await interaction.followup.send(embed=embed)
 
 
 # /val-tracking-remove-all command
@@ -219,4 +227,31 @@ async def removeRoles(interaction: discord.Interaction):
         await member.remove_roles(role)
     await interaction.followup.send("All Valorant accounts attached to " +member.name+" #"+member.discriminator+" have been removed.")
 
+async def paginate(interaction, embed_list):
+    page_index = 0
+    message = await interaction.followup.send(embed=embed_list[page_index])
+    pagination_emojis = ("⬅️", "➡️")
+    for emoji in pagination_emojis:
+        await message.add_reaction(emoji)
+
+    while True:
+        reaction, user = await client.wait_for("reaction_add", check=lambda r, u: r.message.id == message.id and str(r.emoji) in pagination_emojis and u != client.user)
+        if str(reaction.emoji) == "⬅️":
+            page_index -= 1
+        else:
+            page_index += 1
+        if page_index >= len(embed_list):
+            page_index = 0
+        if page_index < 0:
+            page_index = len(embed_list) - 1
+
+        try:
+            await message.remove_reaction(reaction.emoji, user)
+        except discord.Forbidden:
+            pass
+        except discord.HTTPException:
+            pass
+
+        await message.edit(embed=embed_list[page_index])
+    
 client.run(discord_token)

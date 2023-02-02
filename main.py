@@ -162,10 +162,53 @@ async def valTrackingAddCommand(interaction: discord.Interaction, region: str, n
 
         await interaction.followup.send(embed=embed)
 
-# Currently just removes the role dosent remove from database
+    # # /val-accounts-overview command
+@tree.command(name = 'val-accounts-overview', description="Command to get overview of Valorant accounts associated with your Discord.", guild = discord.Object(id=guild_id))
+async def valAccountsOverview(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=False)
+    discord_id = interaction.user.id
+    embed_list = slash_functions.getRowsByDiscord_id(discord_id)
+
+    for user_id, region, name, tag, rank_full, puuid in embed_list:
+        rank_image = str(slash_functions.InitialValApiCall(region, name, tag)[2])
+        banner_image = str(slash_functions.bannerValApiCall(name, tag))
+        # Sorts pulled_rank_full into variables for setting and creating
+        if rank_full == None :
+                rank_short = "Unranked"
+                rank_full = "Unranked"
+        else:
+            rank_short = ' '.join(rank_full.split()[:-1])
+
+        ranks = {
+            "Iron": discord.Colour.from_rgb(139, 94, 60),
+            "Bronze": discord.Colour.from_rgb(205, 127, 50),
+            "Silver": discord.Colour.from_rgb(192, 192, 192),
+            "Gold": discord.Colour.from_rgb(255, 215, 0),
+            "Platinum": discord.Colour.from_rgb(229, 228, 226),
+            "Diamond": discord.Colour.from_rgb(185, 242, 255),
+            "Immortal": discord.Colour.from_rgb(100, 65, 165),
+            "Radiant": discord.Colour.from_rgb(245, 166, 35),
+            "Unranked": discord.Colour.default()
+        }
+        
+        role_name = "Valorant | " + rank_full
+        color = ranks[rank_short].value
+        
+        embed = discord.Embed(title="Overview of Valorant Accounts:", color=color)
+        embed.set_thumbnail(url=f"{rank_image}")
+        embed.set_image(url=f"{banner_image}")
+        embed.add_field(name="Region:", value=region, inline=True)
+        embed.add_field(name="Username:", value=name, inline=True)
+        embed.add_field(name="Tag:", value=tag, inline=True)
+        embed.add_field(name="Rank:", value=rank_full, inline=True)
+        embed.add_field(name="Added Role:",value=role_name, inline=True)        
+        await interaction.followup.send(embed=embed)
+
+
+# /val-tracking-remove-all command
 @tree.command(name = 'val-tracking-remove-all', description='Command to remove all Valorant roles from the user.', guild = discord.Object(id=guild_id))
 async def removeRoles(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=False)
+    await interaction.response.defer(ephemeral=True)
     guild = interaction.guild
     user = interaction.user
     discord_id = user.id

@@ -75,6 +75,15 @@ def initialDatabaseSave(discord_id, region, ign, tag, rank_full, puuid):
     cursor.close()
     connect.close()
 
+def getRowsByDiscord_id(discord_id):
+    connect = sqlite3.connect("database.db")
+    cursor = connect.cursor()
+    cursor.execute("SELECT * FROM valorant_players WHERE discord_id=?", (discord_id,))
+    rows = cursor.fetchall()
+    cursor.close()
+    connect.close()
+    return rows
+
 def removeValorantAccountfromDatabase(discord_id):
     connect = sqlite3.connect("database.db")
     cursor = connect.cursor()
@@ -82,6 +91,10 @@ def removeValorantAccountfromDatabase(discord_id):
     connect.commit()
     cursor.close()
     connect.close()
+
+nest = getRowsByDiscord_id(184886547693174785)
+
+
 
 
 

@@ -158,6 +158,7 @@ async def valTrackingAddCommand(interaction: discord.Interaction, region: str, n
         embed.add_field(name="Username:", value=name, inline=True)
         embed.add_field(name="Tag:", value=tag, inline=True)
         embed.add_field(name="Rank:", value=pulled_rank_full, inline=True)
+        embed.add_field(name="Added Role:",value=role.name, inline=True)
 
         await interaction.followup.send(embed=embed)
 

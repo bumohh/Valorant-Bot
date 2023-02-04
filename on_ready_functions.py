@@ -10,7 +10,7 @@ def initDatabase():
     log.debug("initDatabase in on_ready_functions.py triggered.")
     connect = sqlite3.connect("database.db")
     cursor = connect.cursor()
-    cursor.execute("""CREATE TABLE IF NOT EXISTS valorant_players (discord_id TEXT, region TEXT, ign TEXT, tag TEXT, rank_full TEXT, puuid TEXT)""")
+    cursor.execute("""CREATE TABLE IF NOT EXISTS valorant_players (discord_id TEXT, region TEXT, ign TEXT, tag TEXT, rank_full TEXT, puuid TEXT, verification_status TEXT)""")
     connect.commit()
     cursor.close()
     connect.close()

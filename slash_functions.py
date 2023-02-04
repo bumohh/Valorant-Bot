@@ -16,7 +16,7 @@ def InitialValApiCall(region, ign, tag):
             log.debug("InitialValApiCall in slash_functions.py finished incorrectly first error.")
             raise ValueError(data["error"])
         log.debug("InitialValApiCall in slash_functions.py finished correctly.")
-        return data["data"]["current_data"]["currenttierpatched"],data["data"]["puuid"],data["data"]["current_data"]["images"]["large"]
+        return data["data"]["current_data"]["currenttierpatched"],data["data"]["puuid"],data["data"]["current_data"]["images"]["large"],data["data"]["current_data"]["elo"]
           
     except requests.exceptions.RequestException as e:
         log.debug("InitialValApiCall in slash_functions.py finished incorrectly second error.")
@@ -62,15 +62,15 @@ def duplicateCheck(puuid):
         return True
 
 # Function to make the first save to the database initiated from the slash command    
-def initialDatabaseSave(discord_id, region, ign, tag, rank_full, puuid):
+def initialDatabaseSave(discord_id, region, ign, tag, rank_full, puuid, verification_status):
     connect = sqlite3.connect("database.db")
     cursor = connect.cursor()
     cursor.execute("SELECT * FROM valorant_players WHERE discord_id=? AND puuid=?", (discord_id, puuid,))
     result = cursor.fetchone()
     if result:
-        cursor.execute("UPDATE valorant_players SET region=?, ign=?, tag=?, rank_full=? WHERE discord_id=? AND puuid=?", (region, ign, tag, rank_full, discord_id, puuid,))
+        cursor.execute("UPDATE valorant_players SET region=?, ign=?, tag=?, rank_full=?, verification_status=? WHERE discord_id=? AND puuid=?", (region, ign, tag, rank_full, discord_id, puuid, verification_status,))
     else:
-        cursor.execute("""INSERT INTO valorant_players (discord_id, region, ign, tag, rank_full, puuid)VALUES (?,?,?,?,?,?)""", (discord_id, region, ign, tag, rank_full, puuid))
+        cursor.execute("""INSERT INTO valorant_players (discord_id, region, ign, tag, rank_full, puuid, verification_status)VALUES (?,?,?,?,?,?,?)""", (discord_id, region, ign, tag, rank_full, puuid, verification_status))
     connect.commit()
     cursor.close()
     connect.close()
@@ -92,7 +92,16 @@ def removeValorantAccountfromDatabase(discord_id):
     cursor.close()
     connect.close()
 
+def updateVerifiedStatusInDatabase(discord_id, verification_status):
+    connect = sqlite3.connect("database.db")
+    cursor = connect.cursor()
+    rows = cursor.execute("SELECT * FROM valorant_players WHERE discord_id=?", (discord_id,)).fetchall()
+    for row in rows:
+        cursor.execute("UPDATE valorant_players SET verification_status=? WHERE discord_id=?", (verification_status, discord_id))
+    connect.commit()
+    cursor.close()
+    connect.close()
 
 
 
-
+#updateVerifiedStatusInDatabase("184886547693174785","bb532c7f-01b8-5385-9658-b773a2174182","Verified")

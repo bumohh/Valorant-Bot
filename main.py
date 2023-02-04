@@ -4,6 +4,7 @@ from discord import app_commands
 from discord.app_commands import Choice
 # External
 import asyncio
+import re
 # Internal
 import log
 import on_ready_functions
@@ -11,17 +12,31 @@ import slash_functions
 from variables import *
 
 
+
 class aclient(discord.Client):
+    
     def __init__(self):
         super().__init__(intents = discord.Intents.all())
         self.synced = False
 
     async def on_ready(self):
+        global narberals_verifier_role_id
         await self.wait_until_ready()
         if not self.synced:
             await tree.sync(guild = discord.Object(id=guild_id))
             self.synced = True
         log.debug(f"We have logged in as {self.user}.")
+        # Created Narberals Verifier Role
+        server = client.get_guild(guild_id)
+        role = discord.utils.get(server.roles, name="Narberals Verifier")
+        if not role:
+            role = await server.create_role(name="Narberals Verifier")
+        bot = server.get_member(client.user.id)
+        if bot.top_role.position > 0:
+            await role.edit(position=bot.top_role.position - 1)
+        else:
+            await role.edit(position=0)
+        narberals_verifier_role_id = role.id
 
         on_ready_functions.initDatabase()
         while True:
@@ -30,7 +45,7 @@ class aclient(discord.Client):
             else:
                 # Main on_ready loop grabs database and loops through the data one per every 10 seconds so api call should only be 6 per minute max.
                 for data in on_ready_functions.readDatabase():
-                    discord_id, region, ign, tag, rank_full, puuid = data
+                    discord_id, region, ign, tag, rank_full, puuid, verification_status = data
                     log.debug("Calling Regular Valorant API for "+ str(ign)+" #"+str(tag)+".")
                     regularValApiCall_results = on_ready_functions.regularValApiCall(region, puuid)
                     pulled_rank_full = regularValApiCall_results[0]
@@ -42,43 +57,54 @@ class aclient(discord.Client):
                         on_ready_functions.updateDatabase(pulled_rank_full, pulled_ign, pulled_tag, discord_id, puuid)
                     elif str(pulled_tag) != str(pulled_tag):
                         on_ready_functions.updateDatabase(pulled_rank_full, pulled_ign, pulled_tag, discord_id, puuid)
-                    
-                    if str(pulled_rank_full) != str(rank_full):
-                        log.debug("pulled_rank_full did not equal "+str(pulled_rank_full)+" rank_full " + str(rank_full)+".")
-                        # Sorts pulled_rank_full into variables for setting and creating
-                        if pulled_rank_full == None :
-                                rank_short = "Unranked"
-                                pulled_rank_full = "Unranked"
-                        else:
-                            rank_short = ' '.join(pulled_rank_full.split()[:-1])
-
-                        ranks = {
-                            "Iron": discord.Colour.from_rgb(139, 94, 60),
-                            "Bronze": discord.Colour.from_rgb(205, 127, 50),
-                            "Silver": discord.Colour.from_rgb(192, 192, 192),
-                            "Gold": discord.Colour.from_rgb(255, 215, 0),
-                            "Platinum": discord.Colour.from_rgb(229, 228, 226),
-                            "Diamond": discord.Colour.from_rgb(185, 242, 255),
-                            "Immortal": discord.Colour.from_rgb(100, 65, 165),
-                            "Radiant": discord.Colour.from_rgb(245, 166, 35),
-                            "Unranked": discord.Colour.default()
-                        }
-                        color = ranks[rank_short].value
+                    log.debug("Status: "+verification_status)
+                    # check if user has roled call rank_full
+                    if verification_status == "Verified":
                         guild = discord.utils.get(client.guilds, id=guild_id)
                         member = discord.utils.get(guild.members, id=int(discord_id))
+                        role_list = member.roles
+                        if str(pulled_rank_full) != str(rank_full) or pulled_rank_full not in str(role_list):
+                            log.debug("pulled_rank_full did not equal "+str(pulled_rank_full)+" rank_full " + str(rank_full)+".")
+                            # Sorts pulled_rank_full into variables for setting and creating
+                            if pulled_rank_full == None :
+                                    rank_short = "Unranked"
+                                    pulled_rank_full = "Unranked"
+                            else:
+                                rank_short = ' '.join(pulled_rank_full.split()[:-1])
 
-                        old_role_name = "Valorant | " + rank_full
-                        old_role = discord.utils.get(guild.roles, name=old_role_name)
-                        
-                        role_name = "Valorant | " + pulled_rank_full
-                        role = discord.utils.get(guild.roles, name=role_name)
-                        if not role:
-                            role = await guild.create_role(name=role_name,color=color)
-                        
-                        await member.remove_roles(old_role)
-                        await member.add_roles(role)
-                        log.debug("removed old role called "+str(old_role)+" and replaced with "+role+".")
-                    
+                            ranks = {
+                                "Iron": discord.Colour.from_rgb(139, 94, 60),
+                                "Bronze": discord.Colour.from_rgb(205, 127, 50),
+                                "Silver": discord.Colour.from_rgb(192, 192, 192),
+                                "Gold": discord.Colour.from_rgb(255, 215, 0),
+                                "Platinum": discord.Colour.from_rgb(229, 228, 226),
+                                "Diamond": discord.Colour.from_rgb(185, 242, 255),
+                                "Immortal": discord.Colour.from_rgb(100, 65, 165),
+                                "Radiant": discord.Colour.from_rgb(245, 166, 35),
+                                "Unranked": discord.Colour.default()
+                            }
+                            color = ranks[rank_short].value
+                            guild = discord.utils.get(client.guilds, id=guild_id)
+                            member = discord.utils.get(guild.members, id=int(discord_id))
+
+
+                            
+                            role_name = "Valorant | " + pulled_rank_full
+                            role = discord.utils.get(guild.roles, name=role_name)
+                            if not role:
+                                role = await guild.create_role(name=role_name,color=color)
+                            if rank_full not in str(role_list):
+                                pass
+                            else:
+                                old_role_name = "Valorant | " + rank_full
+                                old_role = discord.utils.get(guild.roles, name=old_role_name)
+                                await member.remove_roles(old_role)
+                                log.debug("removed old role called "+str(old_role)+" and replaced with "+role+".")
+                                
+                            await member.add_roles(role)
+                            log.debug("Added Role "+role_name+".")
+                    else:
+                        pass
                     await asyncio.sleep(10)
 
 client = aclient()
@@ -90,6 +116,7 @@ tree = app_commands.CommandTree(client)
     Choice(name="KR", value="KR")
     ]
 )
+
 
 # /val-tracking-add command
 @tree.command(guild = discord.Object(id=guild_id), name = 'val-tracking-add', description='Command for Valorant role syncing and tracking.')
@@ -111,10 +138,10 @@ async def valTrackingAddCommand(interaction: discord.Interaction, region: str, n
         guild = interaction.guild
         user = interaction.user
         member = guild.get_member(user.id)
-        await interaction.followup.send("The Valorant account under " +ign+" #"+tag+" appears to have already be linked to another Discord account.")
+        await interaction.followup.send("The Valorant account under " +ign+" #"+tag+" appears to have already be linked to a Discord account.")
     
     else:
-        slash_functions.initialDatabaseSave(discord_id, region, ign, tag, pulled_rank_full, puuid)
+        slash_functions.initialDatabaseSave(discord_id, region, ign, tag, pulled_rank_full, puuid, "Pending")
         
         # Sorts pulled_rank_full into variables for setting and creating
         if pulled_rank_full == None :
@@ -139,19 +166,22 @@ async def valTrackingAddCommand(interaction: discord.Interaction, region: str, n
         color = ranks[rank_short].value
         
         # Sets/Creates the role
-        guild = interaction.guild
-        user = interaction.user
-        member = guild.get_member(user.id)
+        #########################################################################
+        # guild = interaction.guild
+        # user = interaction.user
+        # member = guild.get_member(user.id)
 
-        role = discord.utils.get(guild.roles, name=role_name)
-        if not role:
-            role = await guild.create_role(name=role_name, color=color)
-            log.debug(f'Created new role with name {role.name}')
+        # role = discord.utils.get(guild.roles, name=role_name)
+        # if not role:
+        #     role = await guild.create_role(name=role_name, color=color)
+        #     log.debug(f'Created new role with name {role.name}')
         
-        #adds role to user and send msg back to user
-        await member.add_roles(role)
+        # #adds role to user and send msg back to user
+        # await member.add_roles(role)
+        #########################################################################
         #await interaction.response.send_message("Account: "+str(region)+" "+name+" #"+tag+" has been added user: "+member.name+"#"+member.discriminator+".", ephemeral = True)
-        embed = discord.Embed(title="Added Valorant Account:", color=color)
+        
+        embed = discord.Embed(title="Valorant Account Submitted:", color=color)
         if rank_short == "Unranked": 
             embed.set_thumbnail(url="https://www.metasrc.com/assets/v/3.25.2/images/valorant/ranks/unranked.png")
         else:
@@ -161,9 +191,26 @@ async def valTrackingAddCommand(interaction: discord.Interaction, region: str, n
         embed.add_field(name="Username:", value=name, inline=True)
         embed.add_field(name="Tag:", value=tag, inline=True)
         embed.add_field(name="Rank:", value=pulled_rank_full, inline=True)
-        embed.add_field(name="Added Role:",value=role.name, inline=True)
+        embed.add_field(name="Verification Status:",value="Pending", inline=True)
 
         await interaction.followup.send(embed=embed)
+
+# /val-tracking-add command
+@tree.command(guild = discord.Object(id=guild_id), name = 'val-manual-admin-verification', description='Command for admins to quickly verify a users account.')
+async def valSetAccountVerifed(interaction: discord.Interaction, name: str):
+    await interaction.response.defer(ephemeral=False)
+    server = client.get_guild(guild_id)
+    role = discord.utils.get(server.roles, id=narberals_verifier_role_id)
+    members = [member for member in server.members if role in member.roles]
+    for member in members:
+        if interaction.user.id == member.id:
+            discord_id = int(re.search(r'\d+', str(name)).group())
+            slash_functions.updateVerifiedStatusInDatabase(discord_id, "Verified")
+            await interaction.followup.send('Successfully verified all Valorant accounts connected to '+str(name)+".")
+            break
+    else:
+        await interaction.followup.send('You do not have the required permissions to use this command, to get verified please either wait for an admin or use the "Banner Method".')
+    
 
     # # /val-accounts-overview command
 @tree.command(name = 'val-accounts-overview', description="Command to get overview of Valorant accounts associated with your Discord.", guild = discord.Object(id=guild_id))
@@ -172,8 +219,10 @@ async def valAccountsOverview(interaction: discord.Interaction):
     discord_id = interaction.user.id
     fetched_data = slash_functions.getRowsByDiscord_id(discord_id)
     embed_list = []
-    for user_id, region, name, tag, rank_full, puuid in fetched_data:
-        rank_image = str(slash_functions.InitialValApiCall(region, name, tag)[2])
+    for user_id, region, name, tag, rank_full, puuid, verification_status in fetched_data:
+        InitialValApiCall_results = slash_functions.InitialValApiCall(region, name, tag)
+        elo = InitialValApiCall_results[3]
+        rank_image = InitialValApiCall_results[2]
         banner_image = str(slash_functions.bannerValApiCall(name, tag))
         # Sorts pulled_rank_full into variables for setting and creating
         if rank_full == None :
@@ -207,7 +256,11 @@ async def valAccountsOverview(interaction: discord.Interaction):
         embed.add_field(name="Username:", value=name, inline=True)
         embed.add_field(name="Tag:", value=tag, inline=True)
         embed.add_field(name="Rank:", value=rank_full, inline=True)
-        embed.add_field(name="Added Role:",value=role_name, inline=True)     
+        if verification_status == "Verified":
+            embed.add_field(name="Elo:",value=elo, inline=True)
+            embed.add_field(name="Added Role:",value=role_name, inline=True)   
+        else:
+            embed.add_field(name="Verification Status:",value="Pending", inline=True)    
         embed_list.append(embed)   
     await paginate(interaction, embed_list)
         #await interaction.followup.send(embed=embed)
@@ -222,7 +275,7 @@ async def removeRoles(interaction: discord.Interaction):
     discord_id = user.id
     slash_functions.removeValorantAccountfromDatabase(str(discord_id))
     member = guild.get_member(discord_id)
-    roles_to_remove = [role for role in member.roles if 'Valorant | ' in role.name]
+    roles_to_remove = [role for role in member.roles if 'Valorant |' in role.name]
     for role in roles_to_remove:
         await member.remove_roles(role)
     await interaction.followup.send("All Valorant accounts attached to " +member.name+" #"+member.discriminator+" have been removed.")
@@ -253,5 +306,6 @@ async def paginate(interaction, embed_list):
             pass
 
         await message.edit(embed=embed_list[page_index])
-    
+
+
 client.run(discord_token)

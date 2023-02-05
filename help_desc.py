@@ -1,0 +1,9 @@
+val_accounts_overview_desc = 'The "/val-accounts-overview" Discord command provides users with a summary of their Valorant accounts associated with their Discord account. This command displays various statistics such as the in-game name, tag, rank, and other useful information.'
+
+val_tracking_add_desc = 'The "/val-tracking-add" Discord command allows users to associate their Valorant account with their Discord account in this server. This command requires the user to input their region, in-game name, and tag, and then adds that information to the database for Discord role tracking purposes.'
+
+val_banner_verification_desc = 'The "/val-banner-verification" Discord command allows users to self-verify ownership of their accounts in a 3-step process. To start, enter the command and select step 1 along with the name and tag of the Valorant account to verify.\nGo into your Valorant game and change your player card banner to any random banner in your collection. Enter a custom game (swiftplay is recommended) with cheats on and click the end game phase button in the cheats tab until the game ends. Then, enter the banner verification command again as step 2 along with the name and tag of your Valorant account and set your player card banner back to its original state. Repeat the custom games process until the game ends.\nFinally, enter the final banner verification command, selecting step 3 along with your name and tag. Congratulations, your Valorant account has been successfully verified and your role will now be automatically updated as you rank up.'
+
+val_manual_admin_verification_desc = "Only specifed admins can you this command."
+
+val_tracking_remove_all_desc = 'The "/val-tracking-remove-all" Discord command removes all accounts linked to your Discord account, which includes removing any roles that were assigned by this particular bot and removing all information associated with your Valorant accounts.'

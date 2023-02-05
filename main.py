@@ -5,12 +5,13 @@ from discord.app_commands import Choice
 # External
 import asyncio
 import re
+import datetime
 # Internal
 import log
 import on_ready_functions
 import slash_functions
 from variables import *
-
+import help_desc
 
 
 class aclient(discord.Client):
@@ -129,7 +130,7 @@ async def valTrackingAddCommand(interaction: discord.Interaction, region: str, n
     
     # External helper functions
     initialValApiCall_results = slash_functions.InitialValApiCall(region, ign, tag)
-    bannerValApiCall_results = slash_functions.bannerValApiCall(ign, tag)
+    bannerValApiCall_results = slash_functions.bannerValApiCall(ign, tag)[0]
     pulled_rank_full = initialValApiCall_results[0]
     puuid = initialValApiCall_results[1]
     rank_image = initialValApiCall_results[2]
@@ -161,25 +162,8 @@ async def valTrackingAddCommand(interaction: discord.Interaction, region: str, n
             "Radiant": discord.Colour.from_rgb(245, 166, 35),
             "Unranked": discord.Colour.default()
         }
-        
-        role_name = "Valorant | " + pulled_rank_full
-        color = ranks[rank_short].value
-        
-        # Sets/Creates the role
-        #########################################################################
-        # guild = interaction.guild
-        # user = interaction.user
-        # member = guild.get_member(user.id)
 
-        # role = discord.utils.get(guild.roles, name=role_name)
-        # if not role:
-        #     role = await guild.create_role(name=role_name, color=color)
-        #     log.debug(f'Created new role with name {role.name}')
-        
-        # #adds role to user and send msg back to user
-        # await member.add_roles(role)
-        #########################################################################
-        #await interaction.response.send_message("Account: "+str(region)+" "+name+" #"+tag+" has been added user: "+member.name+"#"+member.discriminator+".", ephemeral = True)
+        color = ranks[rank_short].value
         
         embed = discord.Embed(title="Valorant Account Submitted:", color=color)
         if rank_short == "Unranked": 
@@ -197,7 +181,7 @@ async def valTrackingAddCommand(interaction: discord.Interaction, region: str, n
 
 # /val-tracking-add command
 @tree.command(guild = discord.Object(id=guild_id), name = 'val-manual-admin-verification', description='Command for admins to quickly verify a users account.')
-async def valSetAccountVerifed(interaction: discord.Interaction, name: str):
+async def valAdminSetAccountVerifed(interaction: discord.Interaction, name: str):
     await interaction.response.defer(ephemeral=False)
     server = client.get_guild(guild_id)
     role = discord.utils.get(server.roles, id=narberals_verifier_role_id)
@@ -210,7 +194,61 @@ async def valSetAccountVerifed(interaction: discord.Interaction, name: str):
             break
     else:
         await interaction.followup.send('You do not have the required permissions to use this command, to get verified please either wait for an admin or use the "Banner Method".')
-    
+
+@app_commands.choices(step = [
+    Choice(name="1", value="1"),
+    Choice(name="2", value="2"),
+    Choice(name="3", value="3")
+    ]
+)
+
+# /val-tracking-add command
+@tree.command(guild = discord.Object(id=guild_id), name = 'val-banner-verification', description="Command for users to self verify accounts. If it's your first time please use /val-tracking-help.")
+async def valBannerSetAccountVerifed(interaction: discord.Interaction, step: str, name: str, tag: str):
+    await interaction.response.defer(ephemeral=True)
+    discord_id = interaction.user.id
+    current_time = datetime.datetime.now().time().strftime("%Y-%m-%d %H:%M:%S")
+    if step == "1":
+        step_1_banner = str(slash_functions.bannerValApiCall(name,tag)[1])
+        slash_functions.updateBannerVerificationStepOneDatabase(discord_id, name, tag, step_1_banner, current_time)
+        await interaction.followup.send("Step 1 complete. Please swap your banner to any random banner and go into a custom game and surrender as soon as possible, then enter command again and select step 2.")
+    elif step == "2":
+        get_banner_data = slash_functions.getBannerVerificationDataFromDatabase(discord_id, name, tag)
+        step_1_banner = get_banner_data[0]
+        step_2_banner = str(slash_functions.bannerValApiCall(name,tag)[1])
+        if step_1_banner == step_2_banner:
+            slash_functions.removeVerificationDataFromDatabase(discord_id, name, tag)
+            await interaction.followup.send("Banner swap was not done correctly. Banner verification incomplete. Please restart.")
+        if step_1_banner != step_2_banner:
+            slash_functions.updateBannerVerificationStepTwoDatabase(discord_id, name, tag, step_2_banner)
+            await interaction.followup.send("Step 2 complete. Please swap banners back to the first one you had on before step 1, go into another custom game and surrender as soon as possible, then enter the command again and select step 3 to finish.")
+    elif step == "3":
+        get_banner_data = slash_functions.getBannerVerificationDataFromDatabase(discord_id, name, tag)
+        step_1_banner = get_banner_data[0]
+        start_time = get_banner_data[1]
+        step_2_banner = get_banner_data[2]
+        step_3_banner = str(slash_functions.bannerValApiCall(name,tag)[1])
+        datetime1 = datetime.datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
+        datetime2 = datetime.datetime.strptime(current_time, "%Y-%m-%d %H:%M:%S")
+        delta = datetime2 - datetime1
+        minutes = delta.total_seconds() / 60
+
+        if step_3_banner ==  step_1_banner and step_3_banner != step_2_banner and int(minutes) < 60:
+            slash_functions.updateVerifiedStatusInDatabase(discord_id, "Verified")
+            slash_functions.removeVerificationDataFromDatabase(discord_id, name, tag)
+            await interaction.followup.send("Banner verification complete!")
+        elif step_3_banner ==  step_1_banner and step_3_banner != step_2_banner and int(minutes) > 60:
+            slash_functions.removeVerificationDataFromDatabase(discord_id, name, tag)
+            await interaction.followup.send("1 hour time limit exceeded. Banner verification incomplete. Please restart.")
+        elif step_3_banner !=  step_1_banner:
+            slash_functions.removeVerificationDataFromDatabase(discord_id, name, tag)
+            await interaction.followup.send("Banner swap was not done correctly. Banner verification incomplete. Please restart.")
+        # Tell user sucess
+    else:
+        # Dosen't actually contact a dev right now will set in future*
+        await interaction.followup.send("Something is wrong, automaticlly contacting a dev.")
+
+
 
     # # /val-accounts-overview command
 @tree.command(name = 'val-accounts-overview', description="Command to get overview of Valorant accounts associated with your Discord.", guild = discord.Object(id=guild_id))
@@ -218,53 +256,80 @@ async def valAccountsOverview(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=False)
     discord_id = interaction.user.id
     fetched_data = slash_functions.getRowsByDiscord_id(discord_id)
-    embed_list = []
-    for user_id, region, name, tag, rank_full, puuid, verification_status in fetched_data:
-        InitialValApiCall_results = slash_functions.InitialValApiCall(region, name, tag)
-        elo = InitialValApiCall_results[3]
-        rank_image = InitialValApiCall_results[2]
-        banner_image = str(slash_functions.bannerValApiCall(name, tag))
-        # Sorts pulled_rank_full into variables for setting and creating
-        if rank_full == None :
-                rank_short = "Unranked"
-                rank_full = "Unranked"
-        else:
-            rank_short = ' '.join(rank_full.split()[:-1])
+    log.debug("fetched_data is: "+str(fetched_data))
+    if str(fetched_data) == str([]):
+        await interaction.followup.send("No Valorant accounts are currectly connected to your Discord account.")
+    else:
+        embed_list = []
+        for user_id, region, name, tag, rank_full, puuid, verification_status in fetched_data:
+            InitialValApiCall_results = slash_functions.InitialValApiCall(region, name, tag)
+            getValMatchDataApiCall_results = slash_functions.getValMatchDataApiCall(region, name, tag)
+            rank_rating = InitialValApiCall_results[4] 
+            elo = InitialValApiCall_results[3]
+            rank_image = InitialValApiCall_results[2]
+            banner_image = str(slash_functions.bannerValApiCall(name, tag)[0])
+            # Sorts pulled_rank_full into variables for setting and creating
+            if rank_full == None :
+                    rank_short = "Unranked"
+                    rank_full = "Unranked"
+            else:
+                rank_short = ' '.join(rank_full.split()[:-1])
 
-        ranks = {
-            "Iron": discord.Colour.from_rgb(139, 94, 60),
-            "Bronze": discord.Colour.from_rgb(205, 127, 50),
-            "Silver": discord.Colour.from_rgb(192, 192, 192),
-            "Gold": discord.Colour.from_rgb(255, 215, 0),
-            "Platinum": discord.Colour.from_rgb(229, 228, 226),
-            "Diamond": discord.Colour.from_rgb(185, 242, 255),
-            "Immortal": discord.Colour.from_rgb(100, 65, 165),
-            "Radiant": discord.Colour.from_rgb(245, 166, 35),
-            "Unranked": discord.Colour.default()
-        }
-        
-        role_name = "Valorant | " + rank_full
-        color = ranks[rank_short].value
-        
-        embed = discord.Embed(title="Overview of Valorant Accounts:", color=color)
-        if rank_short == "Unranked": 
-            embed.set_thumbnail(url="https://www.metasrc.com/assets/v/3.25.2/images/valorant/ranks/unranked.png")
-        else:
-            embed.set_thumbnail(url=f"{rank_image}")
-        embed.set_image(url=f"{banner_image}")
-        embed.add_field(name="Region:", value=region, inline=True)
-        embed.add_field(name="Username:", value=name, inline=True)
-        embed.add_field(name="Tag:", value=tag, inline=True)
-        embed.add_field(name="Rank:", value=rank_full, inline=True)
-        if verification_status == "Verified":
-            embed.add_field(name="Elo:",value=elo, inline=True)
-            embed.add_field(name="Added Role:",value=role_name, inline=True)   
-        else:
-            embed.add_field(name="Verification Status:",value="Pending", inline=True)    
-        embed_list.append(embed)   
-    await paginate(interaction, embed_list)
-        #await interaction.followup.send(embed=embed)
+            ranks = {
+                "Iron": discord.Colour.from_rgb(139, 94, 60),
+                "Bronze": discord.Colour.from_rgb(205, 127, 50),
+                "Silver": discord.Colour.from_rgb(192, 192, 192),
+                "Gold": discord.Colour.from_rgb(255, 215, 0),
+                "Platinum": discord.Colour.from_rgb(229, 228, 226),
+                "Diamond": discord.Colour.from_rgb(185, 242, 255),
+                "Immortal": discord.Colour.from_rgb(100, 65, 165),
+                "Radiant": discord.Colour.from_rgb(245, 166, 35),
+                "Unranked": discord.Colour.default()
+            }
+            
+            role_name = "Valorant | " + rank_full
+            color = ranks[rank_short].value
+            
+            embed = discord.Embed(title="Overview of Valorant Accounts:", color=color)
+            if rank_short == "Unranked": 
+                embed.set_thumbnail(url="https://www.metasrc.com/assets/v/3.25.2/images/valorant/ranks/unranked.png")
+            else:
+                embed.set_thumbnail(url=f"{rank_image}")
+            embed.set_image(url=f"{banner_image}")
+            embed.add_field(name="Region:", value=region, inline=True)
+            embed.add_field(name="Username:", value=name, inline=True)
+            embed.add_field(name="Tag:", value=tag, inline=True)
+            embed.add_field(name="Rank:", value=rank_full, inline=True)
+            if verification_status == "Verified":
+                embed.add_field(name="Rank Rating:",value=rank_rating, inline=True)
+                embed.add_field(name="Elo:",value=elo, inline=True)
+                embed.add_field(name="Average KDA:",value=getValMatchDataApiCall_results[0], inline=True)
+                embed.add_field(name="Average HS:",value=getValMatchDataApiCall_results[1], inline=True)
+                embed.add_field(name="Average BS:",value=getValMatchDataApiCall_results[2], inline=True)
+                embed.add_field(name="Average LS:",value=getValMatchDataApiCall_results[3], inline=True)
+                embed.add_field(name="Winrate:",value=getValMatchDataApiCall_results[4], inline=True)
+                
+                embed.add_field(name="Added Role:",value=role_name, inline=True)   
+            else:
+                embed.add_field(name="Verification Status:",value="Pending", inline=True)    
+            embed_list.append(embed)   
+        await paginate(interaction, embed_list)
 
+
+    # # /val-accounts-overview command
+@tree.command(name = 'val-help-overview', description="Help section for the Valorant commands.", guild = discord.Object(id=guild_id))
+async def valAccountsOverview(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=False)
+    image = "https://cdn.publish0x.com/prod/fs/images/6ac0ff5feb2e723eaa18dace82b96ab9aca5ed93038ad2d739f3d58132cc3bed.png"
+    embed = discord.Embed(title="Overview of Valorant commands:", color=discord.Colour.from_rgb(245, 166, 35))
+    embed.set_thumbnail(url=f"{image}")
+    embed.add_field(name="/val-accounts-overview",value=help_desc.val_accounts_overview_desc, inline=False)
+    embed.add_field(name="/val-tracking-add",value=help_desc.val_tracking_add_desc, inline=False)
+    embed.add_field(name="/val-banner-verification",value=help_desc.val_banner_verification_desc, inline=False)
+    embed.add_field(name="/val-manual-admin-verification",value=help_desc.val_manual_admin_verification_desc, inline=False)
+    embed.add_field(name="/val-tracking-remove-all",value=help_desc.val_tracking_remove_all_desc, inline=False)
+    await interaction.followup.send(embed=embed)
+    
 
 # /val-tracking-remove-all command
 @tree.command(name = 'val-tracking-remove-all', description='Command to remove all Valorant roles from the user.', guild = discord.Object(id=guild_id))

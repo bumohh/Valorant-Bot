@@ -3,6 +3,7 @@ import requests
 import sqlite3
 #Internal
 import log
+from variables import *
 
 
 # Function to initiate the basic database
@@ -11,6 +12,7 @@ def initDatabase():
     connect = sqlite3.connect("database.db")
     cursor = connect.cursor()
     cursor.execute("""CREATE TABLE IF NOT EXISTS valorant_players (discord_id TEXT, region TEXT, ign TEXT, tag TEXT, rank_full TEXT, puuid TEXT, verification_status TEXT)""")
+    cursor.execute("""CREATE TABLE IF NOT EXISTS val_verification (discord_id TEXT, ign TEXT, tag TEXT, step_1_banner TEXT, start_time TEXT, step_2_banner TEXT)""")
     connect.commit()
     cursor.close()
     connect.close()
@@ -48,9 +50,13 @@ def readDatabase():
 # Function collect data from api based on puuid
 def regularValApiCall(region,puuid):
     log.debug("regularValApiCall in on_ready_functions.py triggered.")
+    
+    headers = {
+        "Authorization": henrikdev_token
+    }
     endpoint = f"https://api.henrikdev.xyz/valorant/v2/by-puuid/mmr/{region}/{puuid}"
     try:
-        response = requests.get(endpoint)
+        response = requests.get(endpoint,headers=headers)
         response.raise_for_status()
         data = response.json()
         if 'error' in data:

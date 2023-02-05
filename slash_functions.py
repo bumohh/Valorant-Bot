@@ -167,6 +167,7 @@ def testValApiCall(region, ign, tag):
         raise ValueError(str(e))
     
 
+# This function works tried changing the request to match the format of the other functions and the math changed (????) and spat out the wrong calcs why idk you tell me beware you have been warned
 def getValMatchDataApiCall(region, ign, tag):
     url = f"https://api.henrikdev.xyz/valorant/v3/matches/{region}/{ign}/{tag}"
 

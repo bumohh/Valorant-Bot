@@ -303,10 +303,10 @@ async def valAccountsOverview(interaction: discord.Interaction):
             if verification_status == "Verified":
                 embed.add_field(name="Rank Rating:",value=rank_rating, inline=True)
                 embed.add_field(name="Elo:",value=elo, inline=True)
+                embed.add_field(name="Average Headshot:",value=getValMatchDataApiCall_results[1], inline=True)
+                embed.add_field(name="Average Bodyshot:",value=getValMatchDataApiCall_results[2], inline=True)
+                embed.add_field(name="Average Legshot:",value=getValMatchDataApiCall_results[3], inline=True)
                 embed.add_field(name="Average KDA:",value=getValMatchDataApiCall_results[0], inline=True)
-                embed.add_field(name="Average HS:",value=getValMatchDataApiCall_results[1], inline=True)
-                embed.add_field(name="Average BS:",value=getValMatchDataApiCall_results[2], inline=True)
-                embed.add_field(name="Average LS:",value=getValMatchDataApiCall_results[3], inline=True)
                 embed.add_field(name="Winrate:",value=getValMatchDataApiCall_results[4], inline=True)
                 
                 embed.add_field(name="Added Role:",value=role_name, inline=True)   

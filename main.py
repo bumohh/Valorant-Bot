@@ -378,7 +378,10 @@ async def valAccountsOverview(interaction: discord.Interaction):
         embed_list = []
         for user_id, region, name, tag, rank_full, puuid, verification_status in fetched_data:
             InitialValApiCall_results = slash_functions.InitialValApiCall(region, name, tag)
-            getValMatchDataApiCall_results = slash_functions.getValMatchDataApiCall(region, name, tag)
+            try:
+                getValMatchDataApiCall_results = slash_functions.getValMatchDataApiCall(region, name, tag)
+            except:
+                pass
             rank_rating = InitialValApiCall_results[4] 
             elo = InitialValApiCall_results[3]
             rank_image = InitialValApiCall_results[2]

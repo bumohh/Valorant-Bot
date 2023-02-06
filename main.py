@@ -97,6 +97,10 @@ class aclient(discord.Client):
                         guild = discord.utils.get(client.guilds, id=guild_id)
                         member = discord.utils.get(guild.members, id=int(discord_id))
                         role_list = member.roles
+                        if pulled_rank_full == None :
+                            pulled_rank_full = "Unranked"
+                        else:
+                            pass
                         if str(pulled_rank_full) != str(rank_full) or pulled_rank_full not in str(role_list):
                             log.debug("pulled_rank_full did not equal "+str(pulled_rank_full)+" rank_full " + str(rank_full)+".")
                             # Sorts pulled_rank_full into variables for setting and creating
@@ -307,7 +311,7 @@ async def valBannerSetAccountVerifed(interaction: discord.Interaction, step: str
     if step == "1":
         step_1_banner = str(slash_functions.bannerValApiCall(name,tag)[1])
         slash_functions.updateBannerVerificationStepOneDatabase(discord_id, name, tag, step_1_banner, current_time)
-        await interaction.followup.send("Step 1 complete. Please swap your banner to any random banner and go into a custom game and surrender as soon as possible, then enter command again and select step 2.")
+        await interaction.followup.send("Step 1 complete. Please swap your banner to any random banner and go into a custom game with cheats on and end the game by clicking end game phase until the game is over, then enter command again and select step 2. (Please note you have one hour to complete all banner verification steps.)")
     elif step == "2":
         get_banner_data = slash_functions.getBannerVerificationDataFromDatabase(discord_id, name, tag)
         step_1_banner = get_banner_data[0]
@@ -317,7 +321,7 @@ async def valBannerSetAccountVerifed(interaction: discord.Interaction, step: str
             await interaction.followup.send("Banner swap was not done correctly. Banner verification incomplete. Please restart.")
         if step_1_banner != step_2_banner:
             slash_functions.updateBannerVerificationStepTwoDatabase(discord_id, name, tag, step_2_banner)
-            await interaction.followup.send("Step 2 complete. Please swap banners back to the first one you had on before step 1, go into another custom game and surrender as soon as possible, then enter the command again and select step 3 to finish.")
+            await interaction.followup.send("Step 2 complete. Please swap banners back to the first one you had on before step 1, go into another custom game with cheats on and end the game by clicking end game phase until the game is over, then enter the command again and select step 3 to finish.")
     elif step == "3":
         get_banner_data = slash_functions.getBannerVerificationDataFromDatabase(discord_id, name, tag)
         step_1_banner = get_banner_data[0]
@@ -332,7 +336,7 @@ async def valBannerSetAccountVerifed(interaction: discord.Interaction, step: str
         if step_3_banner ==  step_1_banner and step_3_banner != step_2_banner and int(minutes) < 60:
             slash_functions.updateVerifiedStatusInDatabase(discord_id, "Verified")
             slash_functions.removeVerificationDataFromDatabase(discord_id, name, tag)
-            await interaction.followup.send("Banner verification complete!")
+            await interaction.followup.send("Banner verification complete! Congrats! (Please note it may take some time for the database to update your Discord role.)")
         elif step_3_banner ==  step_1_banner and step_3_banner != step_2_banner and int(minutes) > 60:
             slash_functions.removeVerificationDataFromDatabase(discord_id, name, tag)
             await interaction.followup.send("1 hour time limit exceeded. Banner verification incomplete. Please restart.")

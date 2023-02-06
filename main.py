@@ -99,6 +99,7 @@ class aclient(discord.Client):
                         role_list = member.roles
                         if pulled_rank_full == None:
                             pulled_rank_full = "Unranked"
+                            rank_full = "Unranked"
                         else:
                             pass
                         if str(pulled_rank_full) != str(rank_full) or pulled_rank_full not in str(role_list):
@@ -139,7 +140,7 @@ class aclient(discord.Client):
                                 old_role_name = "Valorant | " + rank_full
                                 old_role = discord.utils.get(guild.roles, name=old_role_name)
                                 await member.remove_roles(old_role)
-                                log.debug("removed old role called "+str(old_role)+" and replaced with "+role+".")
+                                #log.debug("removed old role called "+str(old_role)+" and replaced with "+role+".")
                                 
                             await member.add_roles(role)
                             log.debug("Added Role "+role_name+".")

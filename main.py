@@ -537,6 +537,28 @@ async def paginate(interaction, embed_list):
 
         await message.edit(embed=embed_list[page_index])
 
+################################################################################################################################################################################################################ 
+################################################################################################################################################################################################################ 
+@app_commands.choices(creativity_level = [
+    Choice(name="100%", value=1.0),
+    Choice(name="90%", value=0.9),
+    Choice(name="80%", value=0.8),
+    Choice(name="80%", value=0.8),
+    Choice(name="60%", value=0.6), 
+    Choice(name="50%", value=0.5), 
+    Choice(name="40%", value=0.4), 
+    Choice(name="30%", value=0.3), 
+    Choice(name="20%", value=0.2), 
+    Choice(name="10%", value=0.1), 
+    Choice(name="0%", value=0.0)
+    ]
+)
+# /val-tracking-remove-all command
+@tree.command(name = 'ask-chat-gpt', description='One time ChatGPT interface.', guild = discord.Object(id=guild_id))
+async def chatgpt(interaction: discord.Interaction, creativity_level:float, question:str):
+    await interaction.response.defer(ephemeral=True)
+    answer = str(slash_functions.openAIQuestion(creativity_level, question))
+    await interaction.followup.send(answer)
 ################################################################################################################################################################################################################          
                             #         _ __  _   _  _ __   _ __    ___  _ __                                                                                                                                    #
                             #        | '__|| | | || '_ \ | '_ \  / _ \| '__|                                                                                                                                   #

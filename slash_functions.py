@@ -2,6 +2,8 @@
 import requests
 import sqlite3
 import json
+import openai
+
 #Internal
 import log
 from variables import *
@@ -236,3 +238,18 @@ def getValMatchDataApiCall(region, ign, tag):
 
     win_rate = (wins / len(match_data))*100
     return average_kda,avg_headshots,avg_bodyshots,avg_legshots,win_rate
+
+
+def openAIQuestion(creativity_level,question):
+    openai.api_key = (openai_token)
+    response = openai.Completion.create(
+    model="text-davinci-003",
+    prompt=(question),
+    temperature=creativity_level,
+    max_tokens=150,
+    top_p=1,
+    frequency_penalty=0.0,
+    presence_penalty=0.6,
+    stop=[" Human:", " AI:"]
+    )
+    return response.choices[0].text

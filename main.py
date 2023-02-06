@@ -97,14 +97,14 @@ class aclient(discord.Client):
                         guild = discord.utils.get(client.guilds, id=guild_id)
                         member = discord.utils.get(guild.members, id=int(discord_id))
                         role_list = member.roles
-                        if pulled_rank_full == None :
+                        if pulled_rank_full == None:
                             pulled_rank_full = "Unranked"
                         else:
                             pass
                         if str(pulled_rank_full) != str(rank_full) or pulled_rank_full not in str(role_list):
                             log.debug("pulled_rank_full did not equal "+str(pulled_rank_full)+" rank_full " + str(rank_full)+".")
                             # Sorts pulled_rank_full into variables for setting and creating
-                            if pulled_rank_full == None :
+                            if pulled_rank_full == None or pulled_rank_full == "Unranked":
                                     rank_short = "Unranked"
                                     pulled_rank_full = "Unranked"
                             else:
@@ -131,6 +131,8 @@ class aclient(discord.Client):
                             role = discord.utils.get(guild.roles, name=role_name)
                             if not role:
                                 role = await guild.create_role(name=role_name,color=color)
+                            if rank_full == None:
+                                rank_full = "Unranked"
                             if rank_full not in str(role_list):
                                 pass
                             else:
@@ -391,7 +393,7 @@ async def valAccountsOverview(interaction: discord.Interaction):
             rank_image = InitialValApiCall_results[2]
             banner_image = str(slash_functions.bannerValApiCall(name, tag)[0])
             # Sorts pulled_rank_full into variables for setting and creating
-            if rank_full == None :
+            if rank_full == None:
                     rank_short = "Unranked"
                     rank_full = "Unranked"
             else:

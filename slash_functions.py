@@ -183,7 +183,7 @@ def getValMatchDataApiCall(region, ign, tag):
                 match = match + 1
             else:
                 player = 0
-                play_name = "nhm ln"
+                play_name = ign
                 player_list = data["data"][match]["players"]["all_players"]
                 while player < 10:
                     player_list = data["data"][match]["players"]["all_players"][player]["name"]

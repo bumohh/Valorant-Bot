@@ -176,7 +176,7 @@ tree = app_commands.CommandTree(client)
 # /val-tracking-add command
 @tree.command(guild = discord.Object(id=guild_id), name = 'val-tracking-add', description='Command for Valorant role syncing and tracking.')
 async def valTrackingAddCommand(interaction: discord.Interaction, region: str, name: str, tag: str):
-    await interaction.response.defer(ephemeral=False)
+    await interaction.response.defer(ephemeral=True)
     discord_id = str(interaction.user.id)
     
     # Rename to read easier
@@ -454,7 +454,7 @@ async def valAccountsOverview(interaction: discord.Interaction):
 # /val-help-overview command
 @tree.command(name = 'val-help-overview', description="Help section for the Valorant commands.", guild = discord.Object(id=guild_id))
 async def valHelpOverview(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=False)
+    await interaction.response.defer(ephemeral=True)
     image = "https://cdn.publish0x.com/prod/fs/images/6ac0ff5feb2e723eaa18dace82b96ab9aca5ed93038ad2d739f3d58132cc3bed.png"
     embed = discord.Embed(title="Overview of Valorant commands:", color=discord.Colour.from_rgb(245, 166, 35))
     embed.set_thumbnail(url=f"{image}")

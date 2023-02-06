@@ -9,8 +9,7 @@ You will also need to install the a couple dependencies, you can install them wi
 ```
 pip install discord.py requests
 ```
-From there
-You'll need a file named variables.py with: 
+From there you'll need a file named variables.py with: 
 ``` python
 discord_token = "Your Discord Bot Token"
 guild_id = server id you want to use it on

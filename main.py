@@ -81,75 +81,92 @@ class aclient(discord.Client):
                 for data in on_ready_functions.readDatabase():
                     discord_id, region, ign, tag, rank_full, puuid, verification_status = data
                     log.debug("Calling Regular Valorant API for "+ str(ign)+" #"+str(tag)+".")
-                    regularValApiCall_results = on_ready_functions.regularValApiCall(region, puuid)
-                    pulled_rank_full = regularValApiCall_results[0]
-                    pulled_ign = regularValApiCall_results[1]
-                    pulled_tag = regularValApiCall_results[2]
-                    if str(pulled_rank_full) != str(rank_full):
-                        on_ready_functions.updateDatabase(pulled_rank_full, pulled_ign, pulled_tag, discord_id, puuid)
-                    elif str(pulled_ign) != str(ign):
-                        on_ready_functions.updateDatabase(pulled_rank_full, pulled_ign, pulled_tag, discord_id, puuid)
-                    elif str(pulled_tag) != str(pulled_tag):
-                        on_ready_functions.updateDatabase(pulled_rank_full, pulled_ign, pulled_tag, discord_id, puuid)
-                    log.debug("Status: "+verification_status)
-                    # check if user has roled call rank_full
-                    if verification_status == "Verified":
-                        guild = discord.utils.get(client.guilds, id=guild_id)
-                        member = discord.utils.get(guild.members, id=int(discord_id))
-                        role_list = member.roles
-                        if pulled_rank_full == None:
-                            pulled_rank_full = "Unranked"
-                            rank_full = "Unranked"
-                        else:
-                            pass
-                        if str(pulled_rank_full) != str(rank_full) or pulled_rank_full not in str(role_list):
-                            log.debug("pulled_rank_full did not equal "+str(pulled_rank_full)+" rank_full " + str(rank_full)+".")
-                            # Sorts pulled_rank_full into variables for setting and creating
-                            if pulled_rank_full == None or pulled_rank_full == "Unranked":
-                                    rank_short = "Unranked"
-                                    pulled_rank_full = "Unranked"
-                            else:
-                                rank_short = ' '.join(pulled_rank_full.split()[:-1])
-
-                            ranks = {
-                                "Iron": discord.Colour.from_rgb(139, 94, 60),
-                                "Bronze": discord.Colour.from_rgb(205, 127, 50),
-                                "Silver": discord.Colour.from_rgb(192, 192, 192),
-                                "Gold": discord.Colour.from_rgb(255, 215, 0),
-                                "Platinum": discord.Colour.from_rgb(229, 228, 226),
-                                "Diamond": discord.Colour.from_rgb(185, 242, 255),
-                                "Immortal": discord.Colour.from_rgb(100, 65, 165),
-                                "Radiant": discord.Colour.from_rgb(245, 166, 35),
-                                "Unranked": discord.Colour.default()
-                            }
-                            color = ranks[rank_short].value
+                    success = False
+                    attempt = 0
+                    while not success and attempt < 5: 
+                        try : 
+                            log.debug("performing api call in on_ready on attempt: #{}".format(attempt))
+                            regularValApiCall_results = on_ready_functions.regularValApiCall(region, puuid)
+                            log.debug("on_ready api call success")
+                            success = True
+                        except:
+                            if attempt < 5 :
+                                log.debug("on_ready api call failed")
+                                asyncio.sleep(10)
+                                log.debug("making a new attempt")
+                                attempt += 1
+                    if success : 
+                        pulled_rank_full = regularValApiCall_results[0]
+                        pulled_ign = regularValApiCall_results[1]
+                        pulled_tag = regularValApiCall_results[2]
+                        if str(pulled_rank_full) != str(rank_full):
+                            on_ready_functions.updateDatabase(pulled_rank_full, pulled_ign, pulled_tag, discord_id, puuid)
+                        elif str(pulled_ign) != str(ign):
+                            on_ready_functions.updateDatabase(pulled_rank_full, pulled_ign, pulled_tag, discord_id, puuid)
+                        elif str(pulled_tag) != str(pulled_tag):
+                            on_ready_functions.updateDatabase(pulled_rank_full, pulled_ign, pulled_tag, discord_id, puuid)
+                        log.debug("Status: "+verification_status)
+                        # check if user has roled call rank_full
+                        if verification_status == "Verified":
                             guild = discord.utils.get(client.guilds, id=guild_id)
                             member = discord.utils.get(guild.members, id=int(discord_id))
-
-
-                            
-                            role_name = "Valorant | " + pulled_rank_full
-                            role = discord.utils.get(guild.roles, name=role_name)
-                            if not role:
-                                role = await guild.create_role(name=role_name,color=color)
-                            if rank_full == None:
+                            role_list = member.roles
+                            if pulled_rank_full == None:
+                                pulled_rank_full = "Unranked"
                                 rank_full = "Unranked"
-                            if rank_full not in str(role_list):
-                                pass
                             else:
-                                old_role_name = "Valorant | " + rank_full
-                                old_role = discord.utils.get(guild.roles, name=old_role_name)
-                                await member.remove_roles(old_role)
-                                #log.debug("removed old role called "+str(old_role)+" and replaced with "+role+".")
+                                pass
+                            if str(pulled_rank_full) != str(rank_full) or pulled_rank_full not in str(role_list):
+                                log.debug("pulled_rank_full did not equal "+str(pulled_rank_full)+" rank_full " + str(rank_full)+".")
+                                # Sorts pulled_rank_full into variables for setting and creating
+                                if pulled_rank_full == None or pulled_rank_full == "Unranked":
+                                        rank_short = "Unranked"
+                                        pulled_rank_full = "Unranked"
+                                else:
+                                    rank_short = ' '.join(pulled_rank_full.split()[:-1])
+
+                                ranks = {
+                                    "Iron": discord.Colour.from_rgb(139, 94, 60),
+                                    "Bronze": discord.Colour.from_rgb(205, 127, 50),
+                                    "Silver": discord.Colour.from_rgb(192, 192, 192),
+                                    "Gold": discord.Colour.from_rgb(255, 215, 0),
+                                    "Platinum": discord.Colour.from_rgb(229, 228, 226),
+                                    "Diamond": discord.Colour.from_rgb(185, 242, 255),
+                                    "Immortal": discord.Colour.from_rgb(100, 65, 165),
+                                    "Radiant": discord.Colour.from_rgb(245, 166, 35),
+                                    "Unranked": discord.Colour.default()
+                                }
+                                color = ranks[rank_short].value
+                                guild = discord.utils.get(client.guilds, id=guild_id)
+                                member = discord.utils.get(guild.members, id=int(discord_id))
+
+
                                 
-                            await member.add_roles(role)
-                            log.debug("Added Role "+role_name+".")
-                    else:
+                                role_name = "Valorant | " + pulled_rank_full
+                                role = discord.utils.get(guild.roles, name=role_name)
+                                if not role:
+                                    role = await guild.create_role(name=role_name,color=color)
+                                if rank_full == None:
+                                    rank_full = "Unranked"
+                                if rank_full not in str(role_list):
+                                    pass
+                                else:
+                                    old_role_name = "Valorant | " + rank_full
+                                    old_role = discord.utils.get(guild.roles, name=old_role_name)
+                                    await member.remove_roles(old_role)
+                                    #log.debug("removed old role called "+str(old_role)+" and replaced with "+role+".")
+                                    
+                                await member.add_roles(role)
+                                log.debug("Added Role "+role_name+".")
+                        else:
+                            pass
+                        await asyncio.sleep(10)
+                    else :
                         pass
-                    await asyncio.sleep(10)
 
 client = aclient()
 tree = app_commands.CommandTree(client)
+
 
 
 

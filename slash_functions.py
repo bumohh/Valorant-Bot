@@ -240,13 +240,14 @@ def getValMatchDataApiCall(region, ign, tag):
     return average_kda,avg_headshots,avg_bodyshots,avg_legshots,win_rate
 
 
-def openAIQuestion(creativity_level,question):
+def openAIQuestion(creativity_level,question, discord_id):
     openai.api_key = (openai_token)
     response = openai.Completion.create(
     model="text-davinci-003",
     prompt=(question),
     temperature=creativity_level,
     max_tokens=150,
+    user=str(discord_id),
     top_p=1,
     frequency_penalty=0.0,
     presence_penalty=0.6,

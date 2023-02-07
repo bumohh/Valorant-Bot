@@ -25,6 +25,7 @@ import on_ready_functions
 import slash_functions
 from variables import *
 import help_desc
+from openai import error as openaierror
 
 
 
@@ -538,7 +539,12 @@ async def paginate(interaction, embed_list):
         await message.edit(embed=embed_list[page_index])
 
 ################################################################################################################################################################################################################ 
-################################################################################################################################################################################################################ 
+######################################################################################################################################################################################
+###########################
+# /val-tracking-remove-all command
+
+# /chat-gpt-open-conversation command
+'''
 @app_commands.choices(creativity_level = [
     Choice(name="100%", value=1.0),
     Choice(name="90%", value=0.9),
@@ -553,12 +559,110 @@ async def paginate(interaction, embed_list):
     Choice(name="0%", value=0.0)
     ]
 )
-# /val-tracking-remove-all command
 @tree.command(name = 'ask-chat-gpt', description='One time ChatGPT interface.', guild = discord.Object(id=guild_id))
 async def chatgpt(interaction: discord.Interaction, creativity_level:float, question:str):
     await interaction.response.defer(ephemeral=True)
     answer = str(slash_functions.openAIQuestion(creativity_level, question))
     await interaction.followup.send(answer)
+'''
+    
+@tree.command(name="open-conversation", description="Start a prompt with chatgpt using a post in a forum", guild=discord.Object(id=guild_id))
+async def openConversation(interaction : discord.Interaction, prompt: str):
+    log.debug("Testing Posts")
+    await interaction.response.defer(ephemeral=False)
+    guild = client.get_guild(guild_id)
+    forum = await fetchForum(guild)
+    tag = await fetchTag(forum)
+    chat = [prompt]
+    thread = await forum.create_thread(name="chat-gpt-{}".format(interaction.user.display_name), content=str(prompt), applied_tags=[tag], auto_archive_duration=60, slowmode_delay=30)
+    await interaction.followup.send(content="Created a post in forum named: {}, under the tag: {}.\nClick here :<#{}>".format(forum.name, tag.name,thread.thread.id))
+    async with thread.thread.typing() :
+        try:
+            log.debug("Fetching answer to prompt")
+            response = str(slash_functions.openAIQuestion(1.0, "\n".join(chat), interaction.user.id))
+            log.debug("Fetched answer to prompt, now sending in thread")
+            await thread.thread.send(response)
+            chat.append(response)
+        except openaierror.RateLimitError:
+            log.warning("Being rate limited by openai, waiting 60 seconds then trying again.")
+            await thread.thread.send("Being rate limited by openai, waiting 60 seconds then trying again. Please do not type in this chat for this duration, or type 'quit' to exit.\nThank you :-)")
+            asyncio.sleep(60)
+            response = str(slash_functions.openAIQuestion(1.0, "\n".join(chat), interaction.user.id))
+            await thread.thread.send(content=response)
+            chat.append(response)
+        
+
+    @client.event
+    async def on_message(message : discord.Message):
+        if message.channel.id == thread.thread.id and message.author.id != client.user.id:
+            channel = message.channel
+            if message.content.lower().replace(" ", "") == "quit":
+                await message.channel.delete()
+            else :
+                chat.append(message.content)
+                try:
+                    log.debug("Fetching answer to prompt")
+                    response = str(slash_functions.openAIQuestion(1.0, "\n".join(chat), message.author.id))
+                    log.debug("Fetched answer to prompt, now sending in thread")
+                    async with message.channel.typing():
+                        await channel.send(response)
+                    chat.append(response)
+                except openaierror.RateLimitError:
+                    log.warning("Being rate limited by openai, waiting 60 seconds then trying again.")
+                    async with message.channel.typing():
+                        await channel.send("Being rate limited by openai, waiting 60 seconds then trying again. Please do not type in this chat for this duration, or type 'quit' to exit.\nThank you :-)")
+                    asyncio.sleep(60)
+                    response = str(slash_functions.openAIQuestion(1.0, "\n".join(chat), message.author.id))
+                    async with message.channel.typing():
+                        await channel.send(response)
+                    chat.append(response)
+            
+async def fetchForum(guild: discord.Guild):
+    log.debug("Searching for forum")
+    forum_exists = False
+    found_forum = None
+    for forum in guild.forums:
+        found_forum = forum
+        for tag in forum.available_tags:
+            if "chat-gpt" in tag.name:
+                log.debug("Forum found")
+                return forum
+                
+    if not forum_exists:
+        #forum doesn't exist, so create the forum with tag chat-gpt
+        log.debug("Forum search failed")
+        await createForum(guild)
+    else:
+        #forum exists, so create tag in last forum found
+        createTag(found_forum)
+
+async def fetchTag(forum: discord.ForumChannel):
+    log.debug("Searching for tag")
+    for tag in forum.available_tags:
+        if "chat-gpt" in tag.name:
+            log.debug("Forum found")
+            return tag
+            
+async def createForum(guild: discord.Guild):
+    #forum doesn't exist, so create the forum with tag chat-gpt
+    log.debug("Creating forum")
+    new_forum = await guild.create_forum("Chat GPT Forum")
+    await createTag(new_forum)
+    log.debug("Forum created successfully")
+    return new_forum
+
+async def createTag(forum: discord.ForumChannel):
+    log.debug("Creating tag")
+    new_tag = await forum.create_tag(name="chat-gpt")
+    log.debug("Tag created successfully")
+    return new_tag
+
+async def getMessage(interaction : discord.Interaction):
+    server = client.get_guild(guild_id)
+    channel = server.get_channel(interaction.channel_id)
+    return await channel.fetch_message(interaction.id)
+    
+# /ask-chat-gpt command
 ################################################################################################################################################################################################################          
                             #         _ __  _   _  _ __   _ __    ___  _ __                                                                                                                                    #
                             #        | '__|| | | || '_ \ | '_ \  / _ \| '__|                                                                                                                                   #

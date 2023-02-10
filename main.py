@@ -409,7 +409,10 @@ async def valAccountsOverview(interaction: discord.Interaction):
             rank_rating = InitialValApiCall_results[4] 
             elo = InitialValApiCall_results[3]
             rank_image = InitialValApiCall_results[2]
-            banner_image = str(slash_functions.bannerValApiCall(name, tag)[0])
+            try:
+                banner_image = str(slash_functions.bannerValApiCall(name, tag)[0])
+            except:
+                banner_image = None
             # Sorts pulled_rank_full into variables for setting and creating
             if rank_full == None:
                     rank_short = "Unranked"
@@ -437,7 +440,10 @@ async def valAccountsOverview(interaction: discord.Interaction):
                 embed.set_thumbnail(url="https://www.metasrc.com/assets/v/3.25.2/images/valorant/ranks/unranked.png")
             else:
                 embed.set_thumbnail(url=f"{rank_image}")
-            embed.set_image(url=f"{banner_image}")
+            if banner_image == None:
+                pass
+            else:
+                embed.set_image(url=f"{banner_image}")
             embed.add_field(name="Region:", value=region, inline=True)
             embed.add_field(name="Username:", value=name, inline=True)
             embed.add_field(name="Tag:", value=tag, inline=True)
